@@ -1,0 +1,157 @@
+--- 
+title: "AMS 580 Quiz 10 SVM"
+author: "Srinivasa Phani Madhav"
+date: "30/04/2024"
+output:
+  pdf_document: default
+  word_document: default
+  html_document:
+    df_print: paged
+---
+
+# Load packages
+```{r}
+if (!requireNamespace("tidyverse")) install.packages('tidyverse')
+if (!requireNamespace("caret")) install.packages('caret')
+if (!requireNamespace("kernlab")) install.packages('kernlab')
+
+library(tidyverse)
+library(caret)
+library(kernlab)
+```
+
+Question 1
+
+```{r}
+banknote <- read.csv("C:/Users/MSP/Downloads/banknote.csv")
+banknote <- na.omit(banknote)
+str(banknote)
+banknote$class = as.factor(banknote$class)
+
+# (a) split the data into training and testing
+set.seed(123)
+training.samples <- banknote$class %>% 
+  createDataPartition(p = 0.75, list = FALSE)
+train.data  <- banknote[training.samples, ]
+test.data <- banknote[-training.samples, ]
+
+banknote$class <- as.factor(banknote$class)
+```
+
+Question 2
+
+```{r}
+# Fit the model on the training set
+set.seed(123)
+model <- train(
+  class ~., data = train.data, method = "svmLinear",
+  trControl = trainControl("cv", number = 10),
+  metric = "Kappa", measure.type = "class",
+  preProcess = c("center","scale")
+  # This will scale all the predictors in the model
+  )
+
+# Make predictions on the test data
+probabilities <- model %>% predict(test.data)
+head(probabilities)
+
+# Confusion matrix
+confusionMatrix(as.factor(probabilities), as.factor(test.data$class), positive = '1')
+
+```
+
+Question 3 
+
+```{r}
+# Fit the model on the training set
+set.seed(123)
+model <- train(
+  class ~., data = train.data, method = "svmLinear",
+  trControl = trainControl("cv", number = 10),
+  tuneGrid = expand.grid(C = seq(0.1, 2, length = 20))
+  )
+
+# Plot model accuracy vs different values of Cost
+plot(model)
+
+# Print the best tuning parameter C that
+# maximizes model accuracy
+model$bestTune
+# Make predictions on the test data
+predictions <- model %>% predict(test.data)
+# Make predictions on the test data
+test.data$linear <- predict(model, newdata = test.data)
+# Confusion matrix
+# predicted.classes <- ifelse(predictions > 0.5, 1, 0)
+head(predictions)
+confusionMatrix(factor(predictions), factor(test.data$class), positive = '1')
+
+```
+
+Question 4
+
+```{r}
+# Fit the model on the training set
+set.seed(123)
+model <- train(
+  class ~., data = train.data, method = "svmRadial",
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 10
+  )
+# Print the best tuning parameter sigma and C that
+# maximizes model accuracy
+model$bestTune
+
+# Make predictions on the test data
+predicted.classes <- model %>% predict(test.data)
+test.data$radial <- predict(model, newdata = test.data)
+# Confusion matrix
+# predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+head(predicted.classes)
+confusionMatrix(factor(predicted.classes), factor(test.data$class), positive = '1')
+
+```
+
+Question 5
+
+    
+```{r}
+# Fit the model on the training set
+set.seed(123)
+model <- train(
+  class ~., data = train.data, method = "svmPoly",
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 4
+  )
+# Print the best tuning parameter sigma and C that
+# maximizes model accuracy
+model$bestTune
+
+# Make predictions on the test data
+predicted.classes <- model %>% predict(test.data)
+test.data$poly <- predict(model, newdata = test.data)
+# Confusion matrix
+confusionMatrix(factor(predicted.classes), factor(test.data$class), positive = '1')
+
+```
+# 6 
+
+Overall accuracy rate:
+
+Linear: 0.9795 
+
+Radial basis kernel: 1  
+
+Polynomial kernel:  1 
+
+Here we can observe that the radial basis as well as the polynomial kernel both tend to give the most accuracy (1) followed by the linear kernel with an accuracy of 0.9795.
+
+
+# 7 
+
+```{r}
+ensemble_preds <- apply(test.data[, c("linear", "radial", "poly")], 1, function(x) {
+  unlist(names(sort(table(x), decreasing = TRUE)))[1]
+})
+confusionMatrix(factor(ensemble_preds), factor(test.data$class), positive = '1')
+```

@@ -1,0 +1,163 @@
+---
+title : "Quiz 6"
+author : "Srinivasa  Phani Madhav Marupudi"
+date : "2024-03-25"
+
+output:
+  pdf_document: default
+---
+
+Loading packages and data
+
+```{r}
+# if (!requireNamespace("caTools")) install.packages('caTools')
+# if (!requireNamespace("tidyverse")) install.packages('tidyverse')
+# if (!requireNamespace("caret")) install.packages('caret')
+# if (!requireNamespace("rpart")) install.packages('rpart')
+# if (!requireNamespace("rattle")) install.packages('rattle')
+library(caTools)
+library(tidyverse)
+library(caret)
+library(rpart)
+library(rattle)
+```
+
+# q1
+
+```{r}
+
+df <- read.csv("C:/Users/MSP/Downloads/GreatUnknown.csv")
+
+df <- na.omit(df)
+cases_left <- nrow(df)
+cat("Number of cases left after cleaning:", cases_left, "\n")
+df$y = as.factor(df$y)
+
+set.seed(456)
+
+# train_indices <- sample(nrow(cleaned_df), 0.75 * nrow(cleaned_df))
+train_indices = df$y %>% createDataPartition(p=0.75, list = F)
+train_data <- df[train_indices, ]
+test_data <- df[-train_indices, ]
+
+# write.csv(train_data, "train_data.csv", row.names = FALSE)
+# write.csv(test_data, "test_data.csv", row.names = FALSE)
+
+```
+
+# q2
+
+```{r}
+
+# train_data <- read.csv("train_data.csv")
+tree_model <- rpart(y ~ ., data = train_data, method = "class")
+# test_data <- read.csv("test_data.csv")
+
+predictions <- predict(tree_model, test_data, type = "class")
+
+conf_matrix <- table(predictions, test_data$y)
+
+sensitivity <- conf_matrix[2, 2] / sum(conf_matrix[2, ])
+specificity <- conf_matrix[1, 1] / sum(conf_matrix[1, ])
+accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+
+print("Confusion Matrix:")
+print(conf_matrix)
+
+print(paste("Sensitivity:", sensitivity))
+print(paste("Specificity:", specificity))
+print(paste("Overall Accuracy:", accuracy))
+
+fancyRpartPlot(tree_model)
+
+```
+
+# q3
+
+```{r}
+
+# set.seed(456)
+model2 <- train(
+  y ~., data = train_data, method = "rpart",
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 100)
+plot(model2)
+```
+```{r}
+model2$bestTune
+```
+```{r}
+fancyRpartPlot(model2$finalModel)
+```
+
+# q4
+
+```{r}
+
+predictions_pruned <- predict(model2, test_data)
+conf_matrix_pruned <- table(predictions_pruned, test_data$y)
+
+sensitivity_pruned <- conf_matrix_pruned[2, 2] / sum(conf_matrix_pruned[2, ])
+specificity_pruned <- conf_matrix_pruned[1, 1] / sum(conf_matrix_pruned[1, ])
+accuracy_pruned <- sum(diag(conf_matrix_pruned)) / sum(conf_matrix_pruned)
+
+print("Confusion Matrix (Pruned Tree):")
+print(conf_matrix_pruned)
+
+print(paste("Sensitivity (Pruned Tree):", sensitivity_pruned))
+print(paste("Specificity (Pruned Tree):", specificity_pruned))
+print(paste("Overall Accuracy (Pruned Tree):", accuracy_pruned))
+
+```
+
+# q5
+
+```{r}
+
+library(glm2)
+
+logit_model <- glm(y ~ ., data = train_data, family = binomial)
+predictions_logit <- predict(logit_model, newdata = test_data, type = "response")
+predictions_logit <- ifelse(predictions_logit > 0.5, 1, 0)
+conf_matrix_logit <- table(predictions_logit, test_data$y)
+
+sensitivity_logit <- conf_matrix_logit[2, 2] / sum(conf_matrix_logit[2, ])
+specificity_logit <- conf_matrix_logit[1, 1] / sum(conf_matrix_logit[1, ])
+accuracy_logit <- sum(diag(conf_matrix_logit)) / sum(conf_matrix_logit)
+
+print("Confusion Matrix (Logistic Regression Model):")
+print(conf_matrix_logit)
+
+print(paste("Sensitivity (Logistic Regression Model):", sensitivity_logit))
+print(paste("Specificity (Logistic Regression Model):", specificity_logit))
+print(paste("Overall Accuracy (Logistic Regression Model):", accuracy_logit))
+
+```
+
+# q6
+
+```{r}
+
+combined_preds <- data.frame(test_data, predictions, predictions_pruned, predictions_logit)
+write.csv(train_data, "combined_predictions.csv")
+```
+
+```{r} 
+
+most_predicted <- apply(combined_preds[, c("predictions", "predictions_pruned", "predictions_logit")], 1, function(x) {
+    class_counts <- table(x)
+    names(class_counts)[which.max(class_counts)]
+  })
+
+conf_matrix <- table(most_predicted, combined_preds$y)
+conf_matrix
+
+sensitivity <- conf_matrix[2, 2] / sum(conf_matrix[2, ])
+specificity <- conf_matrix[1, 1] / sum(conf_matrix[1, ])
+accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+
+print(paste("sensitivity: ", sensitivity))
+print(paste("specificity: ", specificity))
+print(paste("accuracy: ", accuracy))
+
+```

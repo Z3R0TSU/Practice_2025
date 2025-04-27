@@ -1,0 +1,141 @@
+---
+title: "Quiz8"
+author: "Srinivasa Phani Madhav Marupudi"
+date: "2024-04-08"
+output: pdf_document
+---
+## Q1 Part I. Random Forest with the GreatUnknown Data – Classification Task
+
+1. 
+```{r}
+library(rpart)
+library(caTools)
+library(caret)
+library(randomForest)
+library(party)
+library(rattle)
+
+data<-read.csv("C:/Users/MSP/Downloads/GreatUnknown.csv", header=T)
+head(data)
+data$y = as.factor(data$y)
+data<-data[complete.cases(data),]
+cat("Number of rows left", nrow(data))
+
+set.seed(123)
+split<-createDataPartition(data$y,p=0.75,list=F)
+train.data<-data[split, ]
+test.data<-data[-split, ]
+```
+
+2. 
+```{r}
+
+model = train(y ~ ., data = train.data, method = "rf", trControl=trainControl("cv", number = 10), importance = T)
+
+model$bestTune
+model$finalModel
+
+conf_matrix_pruned <- model$finalModel$confusion[, -3]
+
+sensitivity_pruned <- conf_matrix_pruned[2, 2] / sum(conf_matrix_pruned[2, ])
+specificity_pruned <- conf_matrix_pruned[1, 1] / sum(conf_matrix_pruned[1, ])
+accuracy_pruned <- sum(diag(conf_matrix_pruned)) / sum(conf_matrix_pruned)
+
+print("Confusion Matrix (Pruned Tree):")
+print(conf_matrix_pruned)
+
+print(paste("Sensitivity (Pruned Tree):", sensitivity_pruned))
+print(paste("Specificity (Pruned Tree):", specificity_pruned))
+print(paste("Overall Accuracy (Pruned Tree):", accuracy_pruned))
+
+```
+
+3. 
+```{r}
+predictions <- model$finalModel %>% predict(test.data) %>% as.vector()
+
+conf_matrix <- table(predictions, test.data$y)
+
+sensitivity <- conf_matrix[2, 2] / sum(conf_matrix[2, ])
+specificity <- conf_matrix[1, 1] / sum(conf_matrix[1, ])
+accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+
+print("Confusion Matrix :")
+print(conf_matrix)
+
+print(paste("Sensitivity :", sensitivity))
+print(paste("Specificity :", specificity))
+print(paste("Overall Accuracy :", accuracy))
+
+```
+
+4. (a)
+```{r}
+varImpPlot(model$finalModel, type = 1)
+```
+
+4 (b)
+```{r}
+varImpPlot(model$finalModel, type = 2)
+```
+
+5. 
+```{r}
+varImp(model, type = 1)
+```
+
+Q2 Part II. Random Forest with the QuestionMark Data – Regression Task
+
+1. 
+```{r}
+library(rpart)
+library(caTools)
+library(caret)
+library(randomForest)
+library(party)
+library(rattle)
+
+data<-read.csv("C:/Users/MSP/Downloads/QuestionMark.csv", header=T)
+head(data)
+data$w4 = as.factor(data$w4)
+cat("Number of rows with missing values", sum(is.na(data)))
+
+set.seed(123)
+split<-createDataPartition(data$y,p=0.95,list=F)
+train.data<-data[split, ]
+test.data<-data[-split, ]
+
+```
+2
+```{r}
+set.seed(123)
+model <- train(
+y ~., data = train.data, method = "rf",
+trControl = trainControl("cv", number = 10)
+)
+
+model$bestTune
+```
+3
+```{r}
+predictions <- model %>% predict(test.data)
+RMSE(predictions, test.data$y)
+
+```
+
+4. 
+```{r}
+rf = randomForest(y ~ ., data = train.data, ntree=500,
+mtry=8,keep.forest=FALSE,importance=TRUE)
+
+rf
+
+# a
+sqrt(rf$mse[500])
+
+# b
+randomForest::importance(rf)
+
+# c
+varImpPlot(rf)
+```

@@ -1,0 +1,11 @@
+library(tidyverse)
+library(caret)
+library(keras)
+library(neuralnet)
+library(e1071)
+
+
+banknote <- read.csv("C:/Users/MSP/Downloads/banknote.csv")
+banknote <- na.omit(banknote)
+cat('There are', nrow(banknote) , 'observations left')
+

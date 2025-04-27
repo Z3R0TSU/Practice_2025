@@ -1,0 +1,111 @@
+---
+title: "Quiz 9"
+author: "Srinivasa Phani Madhav Marupudi"
+date: "4/16/2024"
+output:
+  pdf_document: default
+---
+
+```{r}
+library(tidyverse)
+library(caret)
+library(neuralnet)
+library(randomForest)
+library(rpart)
+library(rattle)
+library(MASS)
+library(tidyverse)
+library(glmnet)
+library(leaps)
+library(ggplot2)
+
+```
+
+# Q1 
+
+```{r}
+
+dat <- read.csv("C:/Users/MSP/Downloads/GreatUnknown(1).csv")
+data <- na.omit(dat)
+data = scale(data[,-13])
+pc = princomp(data, cor = T)
+
+library(factoextra)
+fviz_eig(pc)
+
+k.means.fit <- kmeans(data,2)
+library(cluster)
+clusplot(data, k.means.fit$cluster, main='2D representation of the Cluster solution',color=TRUE, shade=TRUE,labels=2, lines=0)
+table(k.means.fit$cluster,dat$y )
+
+# H.ward
+d <- dist(data, method = "euclidean")
+H.fit <- hclust(d, method="ward.D")
+plot(H.fit)
+rect.hclust(H.fit, k=2, border="red")
+groups <- cutree(H.fit, k=2)
+clusplot(data, groups, main='2D representation of the Cluster solution',color=TRUE, shade=TRUE,labels=2, lines=0)
+clusters = factor(groups, levels = 1:2, labels = c("c1", "c2"))
+table(dat[,13], clusters)
+
+# H.Single
+H.fit <- hclust(d, method="single")
+plot(H.fit)
+rect.hclust(H.fit, k=2, border="red")
+groups <- cutree(H.fit, k=2)
+clusplot(data, groups, main='2D representation of the Cluster solution',color=TRUE, shade=TRUE,labels=2, lines=0)
+clusters = factor(groups, levels = 1:2, labels = c("c1", "c2"))
+table(dat[,13], clusters)
+
+# H.Complete
+H.fit <- hclust(d, method="complete")
+plot(H.fit)
+rect.hclust(H.fit, k=2, border="red")
+groups <- cutree(H.fit, k=2)
+clusplot(data, groups, main='2D representation of the Cluster solution',color=TRUE, shade=TRUE,labels=2, lines=0)
+clusters = factor(groups, levels = 1:2, labels = c("c1", "c2"))
+table(dat[,13], clusters)
+
+# H.Average
+H.fit <- hclust(d, method="average")
+plot(H.fit)
+rect.hclust(H.fit, k=2, border="red")
+groups <- cutree(H.fit, k=2)
+clusplot(data, groups, main='2D representation of the Cluster solution',color=TRUE, shade=TRUE,labels=2, lines=0)
+clusters = factor(groups, levels = 1:2, labels = c("c1", "c2"))
+table(dat[,13], clusters)
+
+# H.Centroid
+H.fit <- hclust(d, method="centroid")
+plot(H.fit)
+rect.hclust(H.fit, k=2, border="red")
+groups <- cutree(H.fit, k=2)
+clusplot(data, groups, main='2D representation of the Cluster solution',color=TRUE, shade=TRUE,labels=2, lines=0)
+clusters = factor(groups, levels = 1:2, labels = c("c1", "c2"))
+table(dat[,13], clusters)
+
+
+#(5) Wards is better than k means by a sizeable margin.
+#(6)
+# In this case Single = Average = Centroid > Wards method > complete > k-means in terms of accuracy and performance deduced from confusion matrix.   
+```
+
+
+# Q2 
+
+```{r}
+library(devtools)
+library(ggbiplot)	 
+#(a)
+dat.pca = prcomp(data, center = TRUE,scale. = TRUE)
+summary(dat.pca)
+#(b)
+ggbiplot(dat.pca)
+#(c)
+ggbiplot(dat.pca, ellipse=TRUE, groups=dat$y)
+#(d)
+dat.pca$rotation[,1]
+
+# We can see that w6,w7,w8,w9,w10,w11 have positive correlation , while the rest have a negative correlation
+#We can deduce that considering upto PC10 should be sufficient for most cases as they have a cumilative proportion of 88.19 %.
+```

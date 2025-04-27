@@ -1,0 +1,326 @@
+---
+Name: Srinivasa Phani Madhav
+title: " Final Exam"
+output: pdf_document
+---
+  
+  
+  
+# Part 1
+  
+```{r}
+if (!requireNamespace("tidyverse")) install.packages('tidyverse')
+if (!requireNamespace("caret")) install.packages('caret')
+if (!requireNamespace("neuralnet")) install.packages('neuralnet')
+if (!requireNamespace("keras")) install.packages('keras')
+if (!requireNamespace("randomForest")) install.packages('randomForest')
+if (!requireNamespace("rpart")) install.packages('rpart')
+if (!requireNamespace("rattle")) install.packages('rattle')
+
+library(tidyverse)
+library(caret)
+library(neuralnet)
+library(keras)
+library(randomForest)
+library(rpart)
+library(rattle)
+library(MASS)
+library(caTools)
+```
+  
+Q1)
+  
+```{r}
+loq <- read.csv("C:/Users/MSP/Downloads/loq.csv")
+loq <- na.omit(loq)
+dim(loq)[1]
+```
+
+```{r}
+set.seed(123)
+training.samples <- loq$y %>% createDataPartition(p = 0.75, list = FALSE)
+train.data  <- loq[training.samples, ]
+test.data <- loq[-training.samples, ]
+```
+
+Q2)
+
+```{r}
+logistic_model <- glm( y ~., data = train.data, family = binomial)
+summary(logistic_model)
+
+probabilities <- logistic_model %>% predict(test.data, type = "response")
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+confusionMatrix(factor(predicted.classes), factor(test.data$y), positive = '1')
+```
+
+Q3)
+
+
+```{r}
+
+set.seed(123)
+model <- neuralnet(y~., data = train.data, hidden = 2, err.fct = "sse", linear.output = F)
+plot(model, rep = "best")
+
+probabilities <- model %>% predict(test.data) %>% as.vector()
+predicted.y <- ifelse(probabilities > 0.5, 1, 0)
+nn.y <- predicted.y
+confusionMatrix(factor(predicted.y), factor(test.data$y), positive = '1')
+```
+```{r}
+
+set.seed(123)
+model <- neuralnet(y~., data = train.data, hidden = 3, err.fct = "sse", linear.output = F)
+plot(model, rep = "best")
+
+probabilities <- model %>% predict(test.data) %>% as.vector()
+predicted.y <- ifelse(probabilities > 0.5, 1, 0)
+nn.y <- predicted.y
+confusionMatrix(factor(predicted.y), factor(test.data$y), positive = '1')
+```
+```{r}
+
+set.seed(123)
+model <- neuralnet(y~., data = train.data, hidden = 4, err.fct = "sse", linear.output = F)
+plot(model, rep = "best")
+
+probabilities <- model %>% predict(test.data) %>% as.vector()
+predicted.y <- ifelse(probabilities > 0.5, 1, 0)
+nn.y <- predicted.y
+confusionMatrix(factor(predicted.y), factor(test.data$y), positive = '1')
+```
+## 3.b
+
+# set.seed(123)
+# model <- neuralnet(y ~ ., data = train.data, hidden = 2, err.fct = "ce", linear.output = F)
+# plot(model, rep = "best")
+# 
+# probabilities <- model %>% predict(test.data)
+# predicted.y <- ifelse(probabilities > 0.5, 1, 0)
+# confusionMatrix(factor(predicted.y), factor(test.data$y), positive = '1')
+
+
+```{r}
+set.seed(123)
+model <- neuralnet(y ~ ., data = train.data, hidden = 3, err.fct = "ce", linear.output = F)
+plot(model, rep = "best")
+
+probabilities <- model %>% predict(test.data)
+predicted.y <- ifelse(probabilities > 0.5, 1, 0)
+confusionMatrix(factor(predicted.y), factor(test.data$y), positive = '1')
+```
+
+
+```{r}
+
+set.seed(123)
+model <- neuralnet(y~., data = train.data, hidden = 4, err.fct = "ce", linear.output = F)
+plot(model, rep = "best")
+
+probabilities <- model %>% predict(test.data)
+predicted.y <- ifelse(probabilities > 0.5, 1, 0)
+confusionMatrix(factor(predicted.y), factor(test.data$y), positive = '1')
+```
+
+#3c The model with error factor sse has better accuracy and is prefered.
+
+Q4)
+
+```{r}
+
+model <- rpart(y ~., data = train.data, control = rpart.control(cp=0))
+par(xpd = NA)
+fancyRpartPlot(model)
+```
+
+```{r}
+pred <- predict(model,newdata = test.data)
+pred <- ifelse(pred == 1, 'predict_1', 'predict_0')
+table(pred,test.data$y)
+
+set.seed(123)
+model2 <- train(
+  y ~., data = train.data, method = "rpart",
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 100)
+plot(model2)
+
+probabilities <- model %>% predict(test.data)
+predicted.y <- ifelse(probabilities > 0.5, 1, 0)
+cart.y <- predicted.y
+confusionMatrix(factor(predicted.y), factor(test.data$y), positive = '1')
+
+```
+
+```{r}
+model2$bestTune
+```
+
+```{r}
+fancyRpartPlot(model2$finalModel)
+```
+
+```{r}
+pred <- predict(model2, newdata = test.data)
+pred <- ifelse(pred == 1, '1' , '0')
+table(pred,test.data$y)
+```
+
+Q5)
+
+### 5.a
+```{r}
+train.data$y <- factor(train.data$y)
+test.data$y <- factor(test.data$y)
+##################################
+
+set.seed(123)
+model <- train(
+  y ~., data = train.data, method = "rf",
+  trControl = trainControl("cv", number = 10),
+  importance = TRUE
+  )
+# Best tuning parameter
+model$bestTune
+```
+
+```{r}
+model$finalModel
+```
+
+### 5.b
+```{r}
+pred <- model %>% predict(test.data)
+rf.y = pred
+confusionMatrix(pred, test.data$y, positive = '1')
+```
+
+### 5.c
+```{r}
+# Plot MeanDecreaseAccuracy
+varImpPlot(model$finalModel, type = 1)
+# Plot MeanDecreaseGini
+varImpPlot(model$finalModel, type = 2)
+```
+
+### 5.d
+```{r}
+varImp(model, type = 2)
+```
+
+# Q6)
+
+# ```{r}
+# set.seed(123)
+# model <- train(
+#   y ~., data = train.data, method = "svmPoly",
+#   trControl = trainControl("cv", number = 10),
+#   tuneLength = 4
+#   )
+# plot(model)
+# ```
+# 
+# ```{r}
+# model$bestTune
+# ```
+# 
+# ```{r}
+# svm.y <- predict(model, newdata = test.data)
+# confusionMatrix(svm.y, test.data$y)
+# ```
+
+# Q7)
+
+```{r}
+pred = cbind( nn.y, cart.y, rf.y)
+pred.m = apply(pred,1,function(x) names(which.max(table(x)))) # Majority vote
+pred.m = factor(pred.m)
+
+confusionMatrix(pred.m, test.data$y, positive = '1')
+```
+
+PART 2
+
+```{r}
+if (!requireNamespace("factoextra")) install.packages('factoextra')
+if (!requireNamespace("cluster")) install.packages('cluster')
+if (!requireNamespace("devtools")) install.packages('devtools')
+if (!requireNamespace("ggbiplot")) install.packages('ggbiplot')
+
+library(factoextra)
+library(cluster)
+library(devtools)
+library(ggbiplot)
+```
+
+```{r}
+loq <- read.csv("C:/Users/MSP/Downloads/loq.csv")
+loq <- na.omit(loq)
+loq <- scale(loq[,-12])
+
+# (a)-(d) 
+pc = princomp(loq, cor = T)
+# Scree-plot
+fviz_eig(pc)
+# 3 clusters looks reasonable
+
+# K means
+k.means.fit <- kmeans(loq, 3) 
+clusplot(loq, k.means.fit$cluster, main='2D representation of the Cluster solution',color=TRUE, shade=TRUE,labels=3, lines=0)
+Kmeans.cm <- table(k.means.fit$cluster, loq[,ncol(loq)])
+print(Kmeans.cm)
+Kmeans.accuracy <- sum(diag(Kmeans.cm)) / sum(Kmeans.cm)
+print(Kmeans.accuracy)
+
+set.seed(123)
+# H.Ward
+d <- dist(loq, method = "euclidean")
+H.fit <- hclust(d, method="ward.D")
+plot(H.fit)
+rect.hclust(H.fit, k=3, border="red")
+groups <- cutree(H.fit, k=3)
+clusplot(loq, groups, main='2D representation of the Cluster solution',color=TRUE, shade=TRUE,labels=3, lines=0)
+clusters = factor(groups)
+H.ward.cm <- table(clusters, loq[,ncol(loq)])
+print(H.ward.cm)
+
+H.ward.accuracy <- sum(diag(H.ward.cm)) / sum(H.ward.cm)
+print(H.ward.accuracy)
+
+# H.Average
+set.seed(123)
+
+H.fit <- hclust(d, method="average")
+plot(H.fit)
+rect.hclust(H.fit, k=3, border="red")
+groups <- cutree(H.fit, k=3)
+clusplot(loq, groups, main='2D representation of the Cluster solution',color=TRUE, shade=TRUE,labels=3, lines=0)
+clusters = factor(groups)
+
+H.average.cm <- table(clusters , loq[,ncol(loq)])
+print(H.average.cm)
+
+H.average.accuracy <- sum(diag(H.average.cm)) / sum(H.average.cm)
+print(H.average.accuracy)
+
+
+```
+
+Question-2
+
+```{r}
+
+#(a)
+loq.pca = prcomp(loq, center = TRUE,scale. = TRUE)
+summary(loq.pca)
+
+#(b)
+ggbiplot(loq.pca)
+#(c)
+ggbiplot(loq.pca, ellipse=TRUE)
+#(d)
+print("PC1 as linear combinations of the original variables")
+print(loq.pca$rotation[,1]) #PC1
+```
+

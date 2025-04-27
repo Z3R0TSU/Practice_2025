@@ -1,0 +1,130 @@
+library calling   
+
+```{r}
+
+library(tidyverse)
+library(caret)
+library(neuralnet)
+library(keras)
+library(tensorflow)
+library(e1071)
+library(rpart)
+library(rattle)
+library(caTools)
+
+```
+
+# Q 1 Data Cleaning
+
+```{r}
+
+Enigma <- read.csv("C:/Users/MSP/Downloads/Enigma.csv")
+Enigma <- na.omit(Enigma)
+cat('There are', nrow(Enigma), 'observations left.')
+
+```
+
+```{r}
+
+str(Enigma)
+
+```
+
+Data partition for train and test
+
+```{r}
+
+set.seed(123)
+training.samples <- Enigma$y %>% createDataPartition(p = 0.75, list = FALSE)
+train.data  <- Enigma[training.samples, ]
+test.data <- Enigma[-training.samples, ]
+
+```
+
+  # Q 2 Perceptron model with one hidden layer with 3 neurons
+
+```{r}
+set.seed(123)
+model <- neuralnet(y~., data = train.data, hidden = 3, err.fct = "ce", linear.output = F)
+plot(model, rep = "best")
+```
+
+```{r}
+probabilities <- model %>% predict(test.data) %>% as.vector()
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+conf_mat <- confusionMatrix(factor(predicted.classes), factor(test.data$y), positive = '1')
+```
+
+# Q 3 building fully grown tree
+
+```{r}
+
+tree_model <- rpart(y ~ ., data = train.data, method = "class")
+predictions <- predict(tree_model, test.data, type = "class")
+
+fancyRpartPlot(tree_model)
+confusionMatrix(as.factor(test.data$y), as.factor(predictions))
+```
+
+```{r}
+train$y <- as.factor(train$y)
+test$y <- as.factor(test$y)
+model2 <- train(
+  y ~., data = train.data, method = "rpart",
+  trControl = trainControl("cv", number = 10),
+  tuneLength = 10)
+plot(model2)
+
+```
+
+```{r}
+model2$bestTune
+```
+
+```{r}
+fancyRpartPlot(model2$finalModel)
+```
+
+```{r}
+predictions <- predict(model2, test.data$y)
+
+conf_mat
+rix <- table(predictions, test.data$y)
+
+sensitivity <- conf_matrix[2, 2] / sum(conf_matrix[2, ])
+specificity <- conf_matrix[1, 1] / sum(conf_matrix[1, ])
+accuracy <- sum(diag(conf_matrix)) / sum(conf_matrix)
+
+print("Confusion Matrix:")
+print(conf_matrix)
+
+print(paste("Sensitivity:", sensitivity))
+print(paste("Specificity:", specificity))
+print(paste("Overall Accuracy:", accuracy))
+
+# fancyRpartPlot(model2)
+
+```
+
+```{r}
+
+predictions_pruned <- predict(model2, test.data)
+conf_matrix_pruned <- table(predictions_pruned, test.data$y)
+
+sensitivity_pruned <- conf_matrix_pruned[2, 2] / sum(conf_matrix_pruned[2, ])
+specificity_pruned <- conf_matrix_pruned[1, 1] / sum(conf_matrix_pruned[1, ])
+accuracy_pruned <- sum(diag(conf_matrix_pruned)) / sum(conf_matrix_pruned)
+
+print("Confusion Matrix (Pruned Tree):")
+print(conf_matrix_pruned)
+
+print(paste("Sensitivity (Pruned Tree):", sensitivity_pruned))
+print(paste("Specificity (Pruned Tree):", specificity_pruned))
+print(paste("Overall Accuracy (Pruned Tree):", accuracy_pruned))
+
+```
+
+```{r}
+install_tensorflow()
+
+```
